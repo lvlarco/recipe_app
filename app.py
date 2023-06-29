@@ -24,9 +24,6 @@ input_size = "md"
 input_class = "py-2"
 color_options = ["primary", "secondary", "success", "info", "warning", "danger"]
 
-ingredients_list_suggestions = ["potatoes", "lemon"]
-html.Datalist(id="list-suggestions", children=[html.Option(value=i) for i in ingredients_list_suggestions])
-
 app.layout = dbc.Container(
     id="app-container",
     style={'padding': '3vh 10vh 8vh 10vh'},
@@ -76,18 +73,45 @@ app.layout = dbc.Container(
                                        ),
                             width="auto", className=input_class
                         ),
+                        dbc.Alert("No results found. Try more ingredients or check spelling", id="search-alert",
+                                  color="danger", dismissable=True, is_open=False, fade=True)
                     ]
                 )
             ]
         ),
-        dbc.Row(id="recipe-output")
-
+        dbc.Row(id="recipe-output"),
+        html.Footer("This is a danger alert. Scary!", style={"position": "absolute", "bottom": "10px"})
     ]
 )
 
 
+# app.index_string = '''
+# <!DOCTYPE html>
+# <html>
+#     <head>
+#         {%metas%}
+#         {%favicon%}
+#         {%css%}
+#     </head>
+#     <body>
+#         {%app_entry%}
+#         <footer>
+#             {%config%}
+#             {%scripts%}
+#             {%renderer%}
+#             <div>
+#             <a href="https://www.buymeacoffee.com/lvlarco" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="position: absolute; bottom: 10px; left: 40%; height: 60px !important;width: 217px !important;" ></a>
+#             </div>
+#         </footer>
+#     </body>
+#
+# </html>
+# '''
+
+
 @app.callback(
-    Output(component_id="recipe-output", component_property="children"),
+    [Output(component_id="recipe-output", component_property="children"),
+     Output(component_id="search-alert", component_property="is_open")],
     Input(component_id="search-btn", component_property="n_clicks"),
     State(component_id="ingredients-input", component_property="value"),
     prevent_initial_call=True
@@ -98,11 +122,15 @@ def ingredient_search_callback(_, ing_dict: list) -> list:
     for i in range(len(ing_dict)):
         ing = ing_dict[i].get("displayValue")
         ing_list.append(ing)
+    alert_bool = False
     rs = RecipeSearch(recipe_df, ing_list)
+    if rs.recipe_search_df.empty:
+        alert_bool = True
+        return [list(), alert_bool]
     recipe_dict = rs.recipe_search_dict
     ing_df = rs.ingredients_df
     recipe_card_list = create_recipe_card(recipe_dict, ing_df)
-    return recipe_card_list
+    return [recipe_card_list, alert_bool]
 
 
 def create_recipe_card(recipe_dict: dict, ingredients_df: pd.DataFrame) -> list:
