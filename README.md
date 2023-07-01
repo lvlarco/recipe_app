@@ -9,7 +9,7 @@ With Recipe Finder, you can easily discover new and exciting dishes using the in
 - Can't decide what to cook? Let Recipe Finder pick a recipe for you!
 ## Installation
 To use Recipe Finder, follow these steps:
-1. Clone the repository: git clone https://github.com/lvlarco/recipe_app.git
+1. Clone the repository: git clone https://github.com/lvlarco/recipefinder.git
 2. Install the required dependencies by running pip install requirements.txt
 3. Access Recipe Finder through your preferred web browser at (*webhost coming soon*).
 ## License
