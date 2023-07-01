@@ -1,7 +1,3 @@
-# dashtools requirements
-import pathlib
-
-# import packages
 import random
 import dash
 import dash_cool_components
@@ -21,11 +17,10 @@ server = app.server
 
 input_size = "md"
 input_class = "py-2"
-color_options = ["primary", "secondary", "success", "info", "warning", "danger"]
 
 app.layout = dbc.Container(
     id="app-container",
-    style={'padding': '3vh 10vh 8vh 10vh'},
+    style={'padding': '3vh 8vh 8vh 8vh'},
     children=[
         html.Div(
             id="header-area",
@@ -89,7 +84,6 @@ app.layout = dbc.Container(
             ]
         ),
         dbc.Row(id="recipe-output"),
-        # html.Footer("This is a danger alert. Scary!", style={"position": "absolute", "bottom": "10px", "left": "40%"})
     ]
 )
 
@@ -229,8 +223,8 @@ def create_recipe_card(recipe_dict: dict, ingredients_df: pd.DataFrame) -> list:
                     outline=True
                 )
             ],
-            width=4,
-            className=input_class
+            className=input_class,
+            xs=12, sm=10, md=6, lg=4
         ) for i in range(len(recipe_dict.get("name")))
     ]
     return recipe_layout
@@ -249,3 +243,4 @@ def create_ingredients_layout_list(ing_df: pd.DataFrame) -> list:
 
 if __name__ == "__main__":
     app.run_server(host="0.0.0.0", debug=False)
+    # app.run_server(debug=True)
