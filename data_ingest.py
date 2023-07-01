@@ -46,7 +46,7 @@ class RecipeSearch:
         """Maps the fish to its type by looking at the tags_list"""
         fishes = ["cod", "tilapia", "salmon", "bass", "trout"]
         try:
-            i = set(fishes) & set((self.extract_tags(recipe_idx)))
+            i = set(fishes) & set(self.extract_tags(recipe_idx))
             return list(i)[0]
         except IndexError:
             pass
@@ -58,9 +58,10 @@ class RecipeSearch:
             return row.name
 
         if not fish_df.empty:
-            self.recipe_search_df.loc[:, "row_index"] = self.recipe_search_df.apply(row_index, axis=1)
-            self.recipe_search_df.loc[:, "protein"] = fish_df["row_index"].apply(self.get_fish_type)
-            self.recipe_search_df.drop("row_index", axis=1, inplace=True)
+            fish_df.loc[:, "row_index"] = fish_df.apply(row_index, axis=1)
+            fish_df.loc[:, "protein"] = fish_df["row_index"].apply(self.get_fish_type)
+            self.recipe_search_df.loc[fish_df.loc[:, "protein"].index, "protein"] = fish_df.loc[:, "protein"]
+            # self.recipe_search_df.drop("row_index", axis=1, inplace=True)
 
     @staticmethod
     def check_in_tag(word: str, tag_list: list) -> bool:
@@ -72,7 +73,6 @@ class RecipeSearch:
         df = self.recipe_search_df.drop(["name", "servings", "time_min", "time_max", "tags", "link"], axis=1)
         return df.dropna(how="all", axis=1)
 
-
 # recipe_df = pd.read_csv(r"resources/recipes_database.csv", header=0)
-# rs = RecipeSearch(recipe_df, ["noodle"])
+# rs = RecipeSearch(recipe_df, ["orzo"])
 # print(rs.recipe_search_df)

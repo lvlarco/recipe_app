@@ -5,7 +5,7 @@ import pathlib
 import random
 import dash
 import dash_cool_components
-from dash import dcc, html
+from dash import dcc, html, callback_context
 from dash.dependencies import Output, Input, State
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -15,8 +15,7 @@ from data_ingest import RecipeSearch
 pd.options.mode.chained_assignment = None
 
 recipe_df = pd.read_csv(r"resources/recipes_database.csv", header=0)
-rp = recipe_df[["name", "protein"]]
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.YETI])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.MINTY, r"css/main.css"], update_title=None)
 app.title = 'Recipe Finder'
 server = app.server
 
@@ -42,8 +41,6 @@ app.layout = dbc.Container(
                             html.Br(),
                             "You can search multiple ingredients and the app will suggest recipes tailored "
                             "to you.",
-                            html.Br(),
-                            "Click on the recipe title to go to the source for instructions"
                         ])
                     ]
                 )
@@ -69,10 +66,22 @@ app.layout = dbc.Container(
                             dbc.Button('Search',
                                        id='search-btn',
                                        disabled=False,
-                                       n_clicks=0
+                                       n_clicks=0,
+                                       color="primary"
                                        ),
                             width="auto", className=input_class
                         ),
+                        dbc.Col(
+                            dbc.Button('Pick a random one for me!',
+                                       id='random-btn',
+                                       disabled=True,
+                                       n_clicks=0,
+                                       color="secondary"
+                                       ),
+                            width="auto", className=input_class
+                        ),
+                        dbc.Alert("Write an ingredient and press Enter before clicking search", id="search-warning",
+                                  color="warning", dismissable=True, is_open=False, fade=True),
                         dbc.Alert("No results found. Try more ingredients or check spelling", id="search-alert",
                                   color="danger", dismissable=True, is_open=False, fade=True)
                     ]
@@ -80,57 +89,101 @@ app.layout = dbc.Container(
             ]
         ),
         dbc.Row(id="recipe-output"),
-        html.Footer("This is a danger alert. Scary!", style={"position": "absolute", "bottom": "10px"})
+        # html.Footer("This is a danger alert. Scary!", style={"position": "absolute", "bottom": "10px", "left": "40%"})
     ]
 )
 
-
-# app.index_string = '''
-# <!DOCTYPE html>
-# <html>
-#     <head>
-#         {%metas%}
-#         {%favicon%}
-#         {%css%}
-#     </head>
-#     <body>
-#         {%app_entry%}
-#         <footer>
-#             {%config%}
-#             {%scripts%}
-#             {%renderer%}
-#             <div>
-#             <a href="https://www.buymeacoffee.com/lvlarco" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="position: absolute; bottom: 10px; left: 40%; height: 60px !important;width: 217px !important;" ></a>
-#             </div>
-#         </footer>
-#     </body>
-#
-# </html>
-# '''
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://kit.fontawesome.com/bec780fc18.js" crossorigin="anonymous"></script>
+        {%metas%}
+        {%favicon%}
+        {%css%}
+    </head>
+    <body>
+        <div id="content-wrapper">
+            {%app_entry%}
+        </div>
+        <footer>
+            <div id="button-wrapper">
+                <div id="icons">
+                    <a href="https://github.com/lvlarco/recipe_app" target="_blank" class="fa-brands fa-github"></a>
+                    <a href="https://lvlarco.github.io/contact" target="_blank" class="fa-solid fa-envelope"></a>
+                </div>
+                <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="lvlarco" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff"></script>
+            </div>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+        <style>
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            #content-wrapper {
+                min-height: calc(100% - 50px);
+                padding-bottom: 50px;
+            }
+            #button-wrapper {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #f8f8f8;
+                padding: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            #icons {
+                display: flex;
+                align-items: center
+            }
+            #icons a.fa-github:before,
+            #icons a.fa-envelope:before {
+                font-size: 200%;
+                margin-left: 30px;
+                text-decoration: none;
+            }
+        </style>
+    </body>
+</html>
+'''
 
 
 @app.callback(
     [Output(component_id="recipe-output", component_property="children"),
-     Output(component_id="search-alert", component_property="is_open")],
+     Output(component_id="search-warning", component_property="is_open"),
+     Output(component_id="search-alert", component_property="is_open"),
+     Output(component_id="random-btn", component_property="disabled")],
     Input(component_id="search-btn", component_property="n_clicks"),
+    Input(component_id="random-btn", component_property="n_clicks"),
     State(component_id="ingredients-input", component_property="value"),
     prevent_initial_call=True
 )
-def ingredient_search_callback(_, ing_dict: list) -> list:
+def ingredient_search_callback(_, __, ing_dict: list) -> list:
     """Returns a dataframe that is filtered by the search of ingredients"""
+    if ing_dict is None:
+        warning_in_on, alert_is_on, random_btn_disabled = True, False, True
+        return [list(), warning_in_on, alert_is_on, random_btn_disabled]
     ing_list = list()
     for i in range(len(ing_dict)):
         ing = ing_dict[i].get("displayValue")
         ing_list.append(ing)
-    alert_bool = False
     rs = RecipeSearch(recipe_df, ing_list)
     if rs.recipe_search_df.empty:
-        alert_bool = True
-        return [list(), alert_bool]
+        warning_in_on, alert_is_on, random_btn_disabled = False, True, True
+        return [list(), warning_in_on, alert_is_on, random_btn_disabled]
     recipe_dict = rs.recipe_search_dict
     ing_df = rs.ingredients_df
     recipe_card_list = create_recipe_card(recipe_dict, ing_df)
-    return [recipe_card_list, alert_bool]
+    if callback_context.triggered_id == "random-btn":
+        recipe_card_list = random.choice(recipe_card_list)
+    return [recipe_card_list, False, False, False]
 
 
 def create_recipe_card(recipe_dict: dict, ingredients_df: pd.DataFrame) -> list:
@@ -172,7 +225,7 @@ def create_recipe_card(recipe_dict: dict, ingredients_df: pd.DataFrame) -> list:
                             ]
                         ),
                     ],
-                    color=random.choice(color_options),
+                    color="info",
                     outline=True
                 )
             ],
